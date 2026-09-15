@@ -104,17 +104,15 @@ static int mca_coll_ucc_register(void)
                                     MCA_BASE_VAR_TYPE_STRING, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
                                     OPAL_INFO_LVL_6, MCA_BASE_VAR_SCOPE_ALL, &cm->cls);
 
-    /* Off by default: a UCC generic datatype is only handled by the TLs that
-     * route reductions through ucc_dt_reduce() (TL/UCP). TL/SHM posts the
-     * reduction to the executor directly and fails at progress time, so the
-     * offload is opt-in until every reduction-capable TL declines non
-     * predefined datatypes at collective init. */
-    cm->ucc_user_ops_enable = 0;
+    /* On by default: every reduction capable UCC TL either handles a generic
+     * datatype (TL/UCP, TL/SHM) or declines it at collective init, so the
+     * offload no longer depends on restricting UCC_TLS. */
+    cm->ucc_user_ops_enable = 1;
     mca_base_component_var_register(c, "user_ops_enable",
                                     "[0|1] Enable/Disable offloading of user-defined "
                                     "(MPI_Op_create) commutative reduction ops to UCC. "
-                                    "Requires a UCC where all reduction TLs support "
-                                    "user-defined datatypes (e.g. UCC_TLS=ucp)",
+                                    "Requires a UCC where all reduction TLs either "
+                                    "support or decline user-defined datatypes",
                                     MCA_BASE_VAR_TYPE_INT, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
                                     OPAL_INFO_LVL_6,
                                     MCA_BASE_VAR_SCOPE_ALL, &cm->ucc_user_ops_enable);
