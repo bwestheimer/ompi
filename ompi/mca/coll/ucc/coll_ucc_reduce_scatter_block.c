@@ -29,16 +29,8 @@ ucc_status_t mca_coll_ucc_reduce_scatter_block_init(const void *sbuf, void *rbuf
         UCC_VERBOSE(5, "inplace reduce_scatter_block is not supported");
         return UCC_ERR_NOT_SUPPORTED;
     }
-    ucc_dt = ompi_dtype_to_ucc_dtype(dtype);
-    ucc_op = ompi_op_to_ucc_op(op);
-    if (OPAL_UNLIKELY(COLL_UCC_DT_UNSUPPORTED == ucc_dt)) {
-        UCC_VERBOSE(5, "ompi_datatype is not supported: dtype = %s",
-                    dtype->super.name);
-        goto fallback;
-    }
-    if (OPAL_UNLIKELY(COLL_UCC_OP_UNSUPPORTED == ucc_op)) {
-        UCC_VERBOSE(5, "ompi_op is not supported: op = %s",
-                    op->o_name);
+    if (OPAL_UNLIKELY(UCC_OK != mca_coll_ucc_map_reduce_op(dtype, op, &ucc_dt,
+                                                           &ucc_op))) {
         goto fallback;
     }
     ucc_coll_args_t coll = {

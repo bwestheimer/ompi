@@ -147,6 +147,10 @@ static int ucc_self_attr_del_fn(MPI_Comm comm, int keyval,
 void mca_coll_ucc_finalize_ctx(void)
 {
     mca_coll_ucc_component_t *cm = &mca_coll_ucc_component;
+
+    /* Generic datatypes created for user-defined ops are library level
+     * objects: release them before tearing down the UCC context. */
+    mca_coll_ucc_user_ops_cleanup();
     if (!cm->libucc_initialized) {
         return;
     }

@@ -13,6 +13,7 @@
 #include "coll_ucc.h"
 #include "coll_ucc_dtypes.h"
 #include "opal/util/argv.h"
+#include "opal/mca/threads/mutex.h"
 
 static int mca_coll_ucc_open(void);
 static int mca_coll_ucc_close(void);
@@ -102,6 +103,21 @@ static int mca_coll_ucc_register(void)
                                     "Comma separated list of UCC CLS to be used for team creation",
                                     MCA_BASE_VAR_TYPE_STRING, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
                                     OPAL_INFO_LVL_6, MCA_BASE_VAR_SCOPE_ALL, &cm->cls);
+
+    /* Off by default: a UCC generic datatype is only handled by the TLs that
+     * route reductions through ucc_dt_reduce() (TL/UCP). TL/SHM posts the
+     * reduction to the executor directly and fails at progress time, so the
+     * offload is opt-in until every reduction-capable TL declines non
+     * predefined datatypes at collective init. */
+    cm->ucc_user_ops_enable = 0;
+    mca_base_component_var_register(c, "user_ops_enable",
+                                    "[0|1] Enable/Disable offloading of user-defined "
+                                    "(MPI_Op_create) commutative reduction ops to UCC. "
+                                    "Requires a UCC where all reduction TLs support "
+                                    "user-defined datatypes (e.g. UCC_TLS=ucp)",
+                                    MCA_BASE_VAR_TYPE_INT, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
+                                    OPAL_INFO_LVL_6,
+                                    MCA_BASE_VAR_SCOPE_ALL, &cm->ucc_user_ops_enable);
 
     cm->cts = COLL_UCC_CTS_STR;
     mca_base_component_var_register(c, "cts",
@@ -193,6 +209,8 @@ static int mca_coll_ucc_open(void)
     mca_coll_ucc_init_default_cts();
     OBJ_CONSTRUCT(&cm->active_modules, opal_pointer_array_t);
     opal_pointer_array_init(&cm->active_modules, 16, OMPI_FORTRAN_HANDLE_MAX, 16);
+    OBJ_CONSTRUCT(&cm->user_ops, opal_list_t);
+    OBJ_CONSTRUCT(&cm->user_ops_lock, opal_mutex_t);
     return OMPI_SUCCESS;
 }
 
@@ -204,6 +222,8 @@ static int mca_coll_ucc_close(void)
      * barrier in ucc_context_destroy).  This call is a safety net for
      * cases where UCC was never initialized. */
     mca_coll_ucc_finalize_ctx();
+    OBJ_DESTRUCT(&cm->user_ops_lock);
+    OBJ_DESTRUCT(&cm->user_ops);
     OBJ_DESTRUCT(&cm->active_modules);
     return OMPI_SUCCESS;
 }

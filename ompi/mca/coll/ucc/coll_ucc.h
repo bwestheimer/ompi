@@ -17,6 +17,8 @@
 #include "opal/memoryhooks/memory.h"
 #include "opal/mca/memory/base/base.h"
 #include "opal/class/opal_pointer_array.h"
+#include "opal/class/opal_list.h"
+#include "opal/mca/threads/mutex.h"
 #include "ompi/mca/coll/coll.h"
 #include "ompi/communicator/communicator.h"
 #include "ompi/attribute/attribute.h"
@@ -71,6 +73,9 @@ struct mca_coll_ucc_component_t {
     opal_free_list_t                requests;
     ucc_team_h                      ucc_comm_world_team;
     opal_pointer_array_t            active_modules;  /* mca_coll_ucc_module_t* for non-WORLD comms */
+    int                             ucc_user_ops_enable;
+    opal_list_t                     user_ops;        /* cached (op, dtype) generic datatypes */
+    opal_mutex_t                    user_ops_lock;
 };
 typedef struct mca_coll_ucc_component_t mca_coll_ucc_component_t;
 
@@ -314,6 +319,29 @@ int mca_coll_ucc_iscatter(const void *sbuf, int scount,
                          struct ompi_communicator_t *comm,
                          ompi_request_t** request,
                          mca_coll_base_module_t *module);
+
+/**
+ * Map an MPI (datatype, op) pair used by a reduction collective onto the UCC
+ * datatype and reduction op. Returns UCC_ERR_NOT_SUPPORTED if the pair cannot
+ * be handled by UCC and the caller must fall back.
+ */
+ucc_status_t mca_coll_ucc_map_reduce_op(struct ompi_datatype_t *dtype,
+                                        struct ompi_op_t *op,
+                                        ucc_datatype_t *ucc_dt,
+                                        ucc_reduction_op_t *ucc_op);
+
+/**
+ * Get (creating and caching it if needed) the UCC generic datatype that
+ * carries a user-defined MPI reduction op for the given datatype.
+ * Returns COLL_UCC_DT_UNSUPPORTED if the (op, dtype) pair cannot be used.
+ */
+ucc_datatype_t mca_coll_ucc_user_op_dtype(struct ompi_op_t *op,
+                                          struct ompi_datatype_t *dtype);
+
+/**
+ * Destroy all cached user-op generic datatypes.
+ */
+void mca_coll_ucc_user_ops_cleanup(void);
 
 END_C_DECLS
 #endif

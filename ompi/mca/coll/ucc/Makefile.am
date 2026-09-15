@@ -19,6 +19,7 @@ coll_ucc_sources =                       \
 		coll_ucc_dtypes.h                \
 		coll_ucc_common.h                \
 		coll_ucc_module.c                \
+		coll_ucc_ops.c                   \
 		coll_ucc_component.c             \
 		coll_ucc_allgather.c             \
 		coll_ucc_allgatherv.c            \
