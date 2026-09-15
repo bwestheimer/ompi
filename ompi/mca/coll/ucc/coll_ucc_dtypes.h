@@ -71,6 +71,54 @@ static ucc_datatype_t ompi_datatype_2_ucc_dt[OPAL_DATATYPE_MAX_PREDEFINED] = {
     [OPAL_DATATYPE_UNAVAILABLE]               = COLL_UCC_DT_UNSUPPORTED
 };
 
+#if UCC_HAVE_PAIR_DT
+/*
+ * The MPI "pair" (MAXLOC/MINLOC) datatypes are OMPI-level composite
+ * datatypes (struct/contiguous-of-2 built out of two basic types), not
+ * OPAL predefined types, so they cannot be looked up through
+ * ompi_datatype_2_ucc_dt[opal_type_id] above (their opal_type_id is
+ * either unrelated or, for the block types, aliased onto an OMPI-level
+ * id that can collide with an unrelated OPAL id). Look them up by the
+ * OMPI-level predefined id (dtype->id) instead, which is stable for the
+ * lifetime of the predefined datatype.
+ */
+static inline ucc_datatype_t ompi_pair_dtype_to_ucc_dtype(int ompi_type_id)
+{
+    switch (ompi_type_id) {
+    case OMPI_DATATYPE_MPI_FLOAT_INT:
+        return UCC_DT_FLOAT32_INT;
+    case OMPI_DATATYPE_MPI_DOUBLE_INT:
+        return UCC_DT_FLOAT64_INT;
+    case OMPI_DATATYPE_MPI_LONG_DOUBLE_INT:
+#if SIZEOF_LONG_DOUBLE == 16
+        return UCC_DT_FLOAT128_INT;
+#else
+        return COLL_UCC_DT_UNSUPPORTED;
+#endif
+    case OMPI_DATATYPE_MPI_SHORT_INT:
+        return UCC_DT_INT16_INT;
+    case OMPI_DATATYPE_MPI_2INT:
+        return UCC_DT_INT32_INT;
+    case OMPI_DATATYPE_MPI_LONG_INT:
+#if SIZEOF_LONG == 8
+        return UCC_DT_INT64_INT;
+#elif SIZEOF_LONG == 4
+        return UCC_DT_INT32_INT;
+#else
+        return COLL_UCC_DT_UNSUPPORTED;
+#endif
+    case OMPI_DATATYPE_MPI_2REAL:
+        return UCC_DT_2FLOAT32;
+    case OMPI_DATATYPE_MPI_2DBLPREC:
+        return UCC_DT_2FLOAT64;
+    case OMPI_DATATYPE_MPI_2INTEGER:
+        return UCC_DT_2INT32;
+    default:
+        return COLL_UCC_DT_UNSUPPORTED;
+    }
+}
+#endif /* UCC_HAVE_PAIR_DT */
+
 static inline ucc_datatype_t ompi_dtype_to_ucc_dtype(ompi_datatype_t *dtype)
 {
     int ompi_type_id = dtype->id;
@@ -78,6 +126,12 @@ static inline ucc_datatype_t ompi_dtype_to_ucc_dtype(ompi_datatype_t *dtype)
 
     if (ompi_type_id < OMPI_DATATYPE_MPI_MAX_PREDEFINED &&
         dtype->super.flags & OMPI_DATATYPE_FLAG_PREDEFINED) {
+#if UCC_HAVE_PAIR_DT
+        ucc_datatype_t pair_dt = ompi_pair_dtype_to_ucc_dtype(ompi_type_id);
+        if (pair_dt != COLL_UCC_DT_UNSUPPORTED) {
+            return pair_dt;
+        }
+#endif
         if (opal_type_id > 0 && opal_type_id < OPAL_DATATYPE_MAX_PREDEFINED) {
             return  ompi_datatype_2_ucc_dt[opal_type_id];
         }
@@ -97,8 +151,13 @@ static ucc_reduction_op_t ompi_op_to_ucc_op_map[OMPI_OP_BASE_FORTRAN_OP_MAX + 1]
    UCC_OP_BOR,                  /* OMPI_OP_BASE_FORTRAN_BOR */
    UCC_OP_LXOR,                 /* OMPI_OP_BASE_FORTRAN_LXOR */
    UCC_OP_BXOR,                 /* OMPI_OP_BASE_FORTRAN_BXOR */
+#if UCC_HAVE_PAIR_DT
+   UCC_OP_MAXLOC,               /* OMPI_OP_BASE_FORTRAN_MAXLOC */
+   UCC_OP_MINLOC,               /* OMPI_OP_BASE_FORTRAN_MINLOC */
+#else
    COLL_UCC_OP_UNSUPPORTED,     /* OMPI_OP_BASE_FORTRAN_MAXLOC */
    COLL_UCC_OP_UNSUPPORTED,     /* OMPI_OP_BASE_FORTRAN_MINLOC */
+#endif
    COLL_UCC_OP_UNSUPPORTED,     /* OMPI_OP_BASE_FORTRAN_REPLACE */
    COLL_UCC_OP_UNSUPPORTED,     /* OMPI_OP_BASE_FORTRAN_NO_OP */
    COLL_UCC_OP_UNSUPPORTED      /* OMPI_OP_BASE_FORTRAN_OP_MAX */
