@@ -12,6 +12,7 @@
 #include "ompi/datatype/ompi_datatype_internal.h"
 #include "ompi/mca/op/op.h"
 #include <ucc/api/ucc.h>
+#include "coll_ucc.h"
 
 #define COLL_UCC_DT_UNSUPPORTED ((ucc_datatype_t)-1)
 #define COLL_UCC_OP_UNSUPPORTED ((ucc_reduction_op_t)-1)
@@ -137,6 +138,22 @@ static inline ucc_datatype_t ompi_dtype_to_ucc_dtype(ompi_datatype_t *dtype)
         }
     }
     return COLL_UCC_DT_UNSUPPORTED;
+}
+
+/**
+ * Map an MPI datatype used by a data movement collective onto a UCC datatype:
+ * a predefined type when there is one, otherwise the cached generic datatype
+ * backing the MPI derived type. Returns COLL_UCC_DT_UNSUPPORTED when the
+ * caller must fall back.
+ */
+static inline ucc_datatype_t mca_coll_ucc_dtype_get(ompi_datatype_t *dtype)
+{
+    ucc_datatype_t ucc_dt = ompi_dtype_to_ucc_dtype(dtype);
+
+    if (OPAL_UNLIKELY(COLL_UCC_DT_UNSUPPORTED == ucc_dt)) {
+        (void)mca_coll_ucc_derived_dt_get(dtype, &ucc_dt);
+    }
+    return ucc_dt;
 }
 
 static ucc_reduction_op_t ompi_op_to_ucc_op_map[OMPI_OP_BASE_FORTRAN_OP_MAX + 1] = {

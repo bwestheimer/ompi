@@ -76,6 +76,9 @@ struct mca_coll_ucc_component_t {
     int                             ucc_user_ops_enable;
     opal_list_t                     user_ops;        /* cached (op, dtype) generic datatypes */
     opal_mutex_t                    user_ops_lock;
+    int                             ucc_derived_dt_enable;
+    opal_list_t                     derived_dts;     /* cached derived dtype generic datatypes */
+    opal_mutex_t                    derived_dts_lock;
 };
 typedef struct mca_coll_ucc_component_t mca_coll_ucc_component_t;
 
@@ -342,6 +345,26 @@ ucc_datatype_t mca_coll_ucc_user_op_dtype(struct ompi_op_t *op,
  * Destroy all cached user-op generic datatypes.
  */
 void mca_coll_ucc_user_ops_cleanup(void);
+
+/**
+ * Check whether "count" elements of dtype occupy exactly "count * size" bytes
+ * starting at the user buffer address, and if so return that size.
+ */
+int mca_coll_ucc_dtype_is_dense(struct ompi_datatype_t *dtype,
+                                size_t *extent_out);
+
+/**
+ * Get (creating and caching it if needed) the UCC generic datatype backing an
+ * MPI derived datatype for a data movement collective. Returns
+ * UCC_ERR_NOT_SUPPORTED if the datatype cannot be offloaded to UCC.
+ */
+ucc_status_t mca_coll_ucc_derived_dt_get(struct ompi_datatype_t *dtype,
+                                         ucc_datatype_t *ucc_dt);
+
+/**
+ * Destroy all cached derived-datatype generic datatypes.
+ */
+void mca_coll_ucc_derived_dts_cleanup(void);
 
 END_C_DECLS
 #endif

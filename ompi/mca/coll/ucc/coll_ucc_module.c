@@ -151,6 +151,7 @@ void mca_coll_ucc_finalize_ctx(void)
     /* Generic datatypes created for user-defined ops are library level
      * objects: release them before tearing down the UCC context. */
     mca_coll_ucc_user_ops_cleanup();
+    mca_coll_ucc_derived_dts_cleanup();
     if (!cm->libucc_initialized) {
         return;
     }

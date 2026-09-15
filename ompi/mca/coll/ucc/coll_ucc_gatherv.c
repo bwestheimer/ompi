@@ -23,9 +23,9 @@ static inline ucc_status_t mca_coll_ucc_gatherv_init(const void *sbuf, size_t sc
     int comm_rank = ompi_comm_rank(ucc_module->comm);
 
     if (comm_rank == root) {
-        ucc_rdt = ompi_dtype_to_ucc_dtype(rdtype);
+        ucc_rdt = mca_coll_ucc_dtype_get(rdtype);
         if (!is_inplace) {
-            ucc_sdt = ompi_dtype_to_ucc_dtype(sdtype);
+            ucc_sdt = mca_coll_ucc_dtype_get(sdtype);
         }
         if ((COLL_UCC_DT_UNSUPPORTED == ucc_sdt) ||
             (COLL_UCC_DT_UNSUPPORTED == ucc_rdt)) {
@@ -35,7 +35,7 @@ static inline ucc_status_t mca_coll_ucc_gatherv_init(const void *sbuf, size_t sc
             goto fallback;
         }
     } else {
-        ucc_sdt = ompi_dtype_to_ucc_dtype(sdtype);
+        ucc_sdt = mca_coll_ucc_dtype_get(sdtype);
         if (COLL_UCC_DT_UNSUPPORTED == ucc_sdt) {
             UCC_VERBOSE(5, "ompi_datatype is not supported: dtype = %s",
                         sdtype->super.name);

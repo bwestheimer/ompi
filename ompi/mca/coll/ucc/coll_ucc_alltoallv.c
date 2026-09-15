@@ -21,9 +21,9 @@ static inline ucc_status_t mca_coll_ucc_alltoallv_init(const void *sbuf, const i
     ucc_datatype_t ucc_sdt = UCC_DT_INT8, ucc_rdt = UCC_DT_INT8;
     bool is_inplace = (MPI_IN_PLACE == sbuf);
 
-    ucc_rdt = ompi_dtype_to_ucc_dtype(rdtype);
+    ucc_rdt = mca_coll_ucc_dtype_get(rdtype);
     if (!is_inplace) {
-        ucc_sdt = ompi_dtype_to_ucc_dtype(sdtype);
+        ucc_sdt = mca_coll_ucc_dtype_get(sdtype);
     }
     
     if (COLL_UCC_DT_UNSUPPORTED == ucc_sdt ||

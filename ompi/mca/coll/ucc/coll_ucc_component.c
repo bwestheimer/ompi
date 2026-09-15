@@ -119,6 +119,22 @@ static int mca_coll_ucc_register(void)
                                     OPAL_INFO_LVL_6,
                                     MCA_BASE_VAR_SCOPE_ALL, &cm->ucc_user_ops_enable);
 
+    /* 0: disabled; 1: derived datatypes whose memory layout is dense are
+     * offloaded as contiguous UCC generic datatypes; 2: also offload non
+     * contiguous datatypes through the OPAL convertor, which requires a UCC
+     * that stages non-contiguous generic datatypes in its core (UCC master
+     * only consumes the contiguous form and would mis-size the message). */
+    cm->ucc_derived_dt_enable = 1;
+    mca_base_component_var_register(c, "derived_dt_enable",
+                                    "[0|1|2] Enable/Disable offloading of MPI derived "
+                                    "datatypes to UCC as generic datatypes: 0 - off, "
+                                    "1 - dense (contiguous) derived datatypes only, "
+                                    "2 - also non-contiguous ones, which requires UCC "
+                                    "support for packed generic datatypes",
+                                    MCA_BASE_VAR_TYPE_INT, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
+                                    OPAL_INFO_LVL_6,
+                                    MCA_BASE_VAR_SCOPE_ALL, &cm->ucc_derived_dt_enable);
+
     cm->cts = COLL_UCC_CTS_STR;
     mca_base_component_var_register(c, "cts",
                                     "Comma separated list of UCC coll types to be enabled",
@@ -211,6 +227,8 @@ static int mca_coll_ucc_open(void)
     opal_pointer_array_init(&cm->active_modules, 16, OMPI_FORTRAN_HANDLE_MAX, 16);
     OBJ_CONSTRUCT(&cm->user_ops, opal_list_t);
     OBJ_CONSTRUCT(&cm->user_ops_lock, opal_mutex_t);
+    OBJ_CONSTRUCT(&cm->derived_dts, opal_list_t);
+    OBJ_CONSTRUCT(&cm->derived_dts_lock, opal_mutex_t);
     return OMPI_SUCCESS;
 }
 
@@ -222,6 +240,8 @@ static int mca_coll_ucc_close(void)
      * barrier in ucc_context_destroy).  This call is a safety net for
      * cases where UCC was never initialized. */
     mca_coll_ucc_finalize_ctx();
+    OBJ_DESTRUCT(&cm->derived_dts_lock);
+    OBJ_DESTRUCT(&cm->derived_dts);
     OBJ_DESTRUCT(&cm->user_ops_lock);
     OBJ_DESTRUCT(&cm->user_ops);
     OBJ_DESTRUCT(&cm->active_modules);

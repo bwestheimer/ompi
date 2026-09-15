@@ -59,6 +59,12 @@ AC_DEFUN([OMPI_CHECK_UCC],[
                        AC_MSG_RESULT([no])])
            AC_DEFINE_UNQUOTED(UCC_HAVE_PAIR_DT, $flag, [Check if pair (MAXLOC/MINLOC) dt are available in ucc.])
 
+           AC_CHECK_DECL([ucc_dt_create_generic],
+                       [flag=1],
+                       [flag=0],
+                       [#include <ucc/api/ucc.h>])
+           AC_DEFINE_UNQUOTED(UCC_HAVE_GENERIC_DT, $flag, [Check if generic (user-defined) datatypes are available in ucc.])
+
            AC_MSG_CHECKING([if UCC supports user-defined reduction datatypes])
            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <ucc/api/ucc.h>]],
                                          [[ucc_generic_dt_ops_t ops;

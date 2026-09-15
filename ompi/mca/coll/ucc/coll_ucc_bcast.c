@@ -14,7 +14,7 @@ static inline ucc_status_t mca_coll_ucc_bcast_init(void *buf, size_t count, stru
                                                    ucc_coll_req_h *req,
                                                    mca_coll_ucc_req_t *coll_req)
 {
-    ucc_datatype_t         ucc_dt     = ompi_dtype_to_ucc_dtype(dtype);
+    ucc_datatype_t         ucc_dt     = mca_coll_ucc_dtype_get(dtype);
     if (COLL_UCC_DT_UNSUPPORTED == ucc_dt) {
         UCC_VERBOSE(5, "ompi_datatype is not supported: dtype = %s", dtype->super.name);
         goto fallback;

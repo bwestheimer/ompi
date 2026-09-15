@@ -124,34 +124,6 @@ static ucc_status_t mca_coll_ucc_reduce_cb(const ucc_reduce_cb_params_t *params)
     return UCC_OK;
 }
 
-/**
- * The generic datatype is flagged contiguous so that UCC moves the data with
- * plain byte copies: only datatypes whose memory layout is a dense array of
- * "extent" bytes qualify.
- */
-static int mca_coll_ucc_dtype_is_dense(struct ompi_datatype_t *dtype,
-                                       size_t *extent_out)
-{
-    ptrdiff_t extent, lb, true_extent, true_lb;
-    size_t    size;
-
-    if (!(dtype->super.flags & OPAL_DATATYPE_FLAG_CONTIGUOUS)) {
-        return 0;
-    }
-    if (OMPI_SUCCESS != ompi_datatype_type_size(dtype, &size) ||
-        OMPI_SUCCESS != ompi_datatype_get_extent(dtype, &lb, &extent) ||
-        OMPI_SUCCESS != ompi_datatype_get_true_extent(dtype, &true_lb,
-                                                      &true_extent)) {
-        return 0;
-    }
-    if (0 == size || 0 != lb || 0 != true_lb || extent != (ptrdiff_t)size ||
-        true_extent != extent) {
-        return 0;
-    }
-    *extent_out = (size_t)extent;
-    return 1;
-}
-
 static ucc_datatype_t mca_coll_ucc_user_op_create(struct ompi_op_t *op,
                                                   struct ompi_datatype_t *dtype,
                                                   size_t extent)
@@ -291,6 +263,10 @@ ucc_status_t mca_coll_ucc_map_reduce_op(struct ompi_datatype_t *dtype,
         return UCC_ERR_NOT_SUPPORTED;
     }
     if (OPAL_UNLIKELY(COLL_UCC_DT_UNSUPPORTED == *ucc_dt)) {
+        /* Note: a derived datatype never reaches this point with an
+         * intrinsic op - MPI only defines the predefined ops on the
+         * predefined datatypes, and ompi_op_is_valid() rejects the call
+         * before the collective module is invoked. */
         UCC_VERBOSE(5, "ompi_datatype is not supported: dtype = %s",
                     dtype->super.name);
         return UCC_ERR_NOT_SUPPORTED;
