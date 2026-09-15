@@ -156,6 +156,25 @@ static inline ucc_datatype_t mca_coll_ucc_dtype_get(ompi_datatype_t *dtype)
     return ucc_dt;
 }
 
+/**
+ * Check the memory layout of a buffer described by (dtype, count).
+ *
+ * A derived MPI datatype is offloaded as a UCC generic datatype that carries
+ * its own layout, so the contiguity gate must not be applied to it. The gate
+ * depends on the local count, which differs between the root and the other
+ * ranks of a rooted collective, so applying it to a derived datatype makes the
+ * root fall back while the other ranks enter UCC, and the collective hangs.
+ */
+static inline bool mca_coll_ucc_layout_ok(ompi_datatype_t *dtype, size_t count)
+{
+    if (COLL_UCC_DT_UNSUPPORTED == ompi_dtype_to_ucc_dtype(dtype)) {
+        /* Not a predefined type: either offloaded as a generic datatype, whose
+           layout UCC handles, or rejected by mca_coll_ucc_dtype_get() below. */
+        return true;
+    }
+    return ompi_datatype_is_contiguous_memory_layout(dtype, count);
+}
+
 static ucc_reduction_op_t ompi_op_to_ucc_op_map[OMPI_OP_BASE_FORTRAN_OP_MAX + 1] = {
    COLL_UCC_OP_UNSUPPORTED,     /* OMPI_OP_BASE_FORTRAN_NULL = 0 */
    UCC_OP_MAX,                  /* OMPI_OP_BASE_FORTRAN_MAX */

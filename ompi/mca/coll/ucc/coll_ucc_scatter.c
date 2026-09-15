@@ -25,8 +25,8 @@ ucc_status_t mca_coll_ucc_scatter_init(const void *sbuf, size_t scount,
     int comm_size = ompi_comm_size(ucc_module->comm);
 
     if (comm_rank == root) {
-        if (!(is_inplace || ompi_datatype_is_contiguous_memory_layout(rdtype, rcount)) ||
-            !ompi_datatype_is_contiguous_memory_layout(sdtype, scount * comm_size)) {
+        if (!(is_inplace || mca_coll_ucc_layout_ok(rdtype, rcount)) ||
+            !mca_coll_ucc_layout_ok(sdtype, scount * comm_size)) {
             goto fallback;
         }
 
@@ -43,7 +43,7 @@ ucc_status_t mca_coll_ucc_scatter_init(const void *sbuf, size_t scount,
             goto fallback;
         }
     } else {
-        if (!ompi_datatype_is_contiguous_memory_layout(rdtype, rcount)) {
+        if (!mca_coll_ucc_layout_ok(rdtype, rcount)) {
             goto fallback;
         }
 
