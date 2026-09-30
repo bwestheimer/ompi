@@ -65,6 +65,12 @@ AC_DEFUN([OMPI_CHECK_UCC],[
                        [#include <ucc/api/ucc.h>])
            AC_DEFINE_UNQUOTED(UCC_HAVE_GENERIC_DT, $flag, [Check if generic (user-defined) datatypes are available in ucc.])
 
+           AC_CHECK_DECL([UCC_GENERIC_DT_OPS_FLAG_HAS_EXTENT],
+                       [flag=1],
+                       [flag=0],
+                       [#include <ucc/api/ucc.h>])
+           AC_DEFINE_UNQUOTED(UCC_HAVE_GENERIC_DT_EXTENT, $flag, [Check if generic datatypes can describe their extent in ucc.])
+
            AC_MSG_CHECKING([if UCC supports user-defined reduction datatypes])
            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <ucc/api/ucc.h>]],
                                          [[ucc_generic_dt_ops_t ops;

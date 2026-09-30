@@ -128,7 +128,10 @@ static int mca_coll_ucc_register(void)
                                     "datatypes to UCC as generic datatypes: 0 - off, "
                                     "1 - dense (contiguous) derived datatypes only, "
                                     "2 - also non-contiguous ones, which requires UCC "
-                                    "support for packed generic datatypes",
+                                    "support for packed generic datatypes; when UCC "
+                                    "supports the datatype extent they run natively on "
+                                    "the user layout where the algorithm allows it, and "
+                                    "are packed to a contiguous buffer otherwise",
                                     MCA_BASE_VAR_TYPE_INT, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
                                     OPAL_INFO_LVL_6,
                                     MCA_BASE_VAR_SCOPE_ALL, &cm->ucc_derived_dt_enable);

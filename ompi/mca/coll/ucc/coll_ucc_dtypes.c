@@ -23,12 +23,8 @@
  * moves it with plain byte copies and computes every displacement as a
  * multiple of contig_size, exactly like it does for a predefined datatype.
  *
- * A non-zero lower bound is rejected on purpose. UCC has no notion of a buffer
- * base offset: the element displacements it derives (and the displacement
- * arrays of the v-variants, which are expressed in datatype units) are all
- * relative to the buffer pointer, so a shifted type would need every buffer
- * and every displacement of the collective to be adjusted, which is not
- * expressible for the v-collectives.
+ * A non-zero lb is not dense (UCC would copy from buffer, not buffer + lb);
+ * mode 2 offloads it through the convertor, which honors lb.
  */
 int mca_coll_ucc_dtype_is_dense(struct ompi_datatype_t *dtype,
                                 size_t *extent_out)
@@ -176,6 +172,26 @@ static void mca_coll_ucc_dt_finish(void *state)
     free(conv_state);
 }
 
+#if UCC_HAVE_GENERIC_DT_EXTENT
+/* UCC extent = MPI extent (ub - lb), elem_size = MPI size; extent <= 0 is
+ * not expressible and is left to staging */
+static int mca_coll_ucc_dtype_get_layout(struct ompi_datatype_t *dtype,
+                                         size_t *extent_out, size_t *size_out)
+{
+    ptrdiff_t lb, extent;
+    size_t    size;
+
+    if (OMPI_SUCCESS != ompi_datatype_get_extent(dtype, &lb, &extent) ||
+        OMPI_SUCCESS != ompi_datatype_type_size(dtype, &size) ||
+        extent <= 0 || 0 == size) {
+        return 0;
+    }
+    *extent_out = (size_t)extent;
+    *size_out   = size;
+    return 1;
+}
+#endif
+
 static ucc_datatype_t
 mca_coll_ucc_derived_dt_create(struct ompi_datatype_t *dtype, int is_dense,
                                size_t extent)
@@ -204,6 +220,13 @@ mca_coll_ucc_derived_dt_create(struct ompi_datatype_t *dtype, int is_dense,
         ops.flags       = UCC_GENERIC_DT_OPS_FLAG_CONTIG;
         ops.contig_size = extent;
     }
+#if UCC_HAVE_GENERIC_DT_EXTENT
+    else if (mca_coll_ucc_dtype_get_layout(dtype, &ops.extent,
+                                           &ops.elem_size)) {
+        /* UCC packs element i from buffer + i * extent, valid for any lb */
+        ops.flags = UCC_GENERIC_DT_OPS_FLAG_HAS_EXTENT;
+    }
+#endif
 
     status = ucc_dt_create_generic(&ops, dtype, &ddt->ucc_dt);
     if (UCC_OK != status) {
@@ -216,7 +239,8 @@ mca_coll_ucc_derived_dt_create(struct ompi_datatype_t *dtype, int is_dense,
     OBJ_RETAIN(dtype);
     opal_list_append(&mca_coll_ucc_component.derived_dts, &ddt->super);
     UCC_VERBOSE(5, "created %s ucc generic dt for derived dtype %s",
-                is_dense ? "contiguous" : "packed", dtype->super.name);
+                is_dense ? "contiguous" :
+                (ops.flags ? "strided" : "packed"), dtype->super.name);
     return ddt->ucc_dt;
 }
 

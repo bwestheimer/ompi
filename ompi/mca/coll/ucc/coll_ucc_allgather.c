@@ -20,8 +20,8 @@ static inline ucc_status_t mca_coll_ucc_allgather_init(const void *sbuf, size_t 
     bool is_inplace = (MPI_IN_PLACE == sbuf);
     int comm_size = ompi_comm_size(ucc_module->comm);
 
-    if (!(is_inplace || ompi_datatype_is_contiguous_memory_layout(sdtype, scount)) ||
-        !ompi_datatype_is_contiguous_memory_layout(rdtype, rcount * comm_size)) {
+    if (!(is_inplace || mca_coll_ucc_layout_ok(sdtype, scount)) ||
+        !mca_coll_ucc_layout_ok(rdtype, rcount * comm_size)) {
         goto fallback;
     }
 
