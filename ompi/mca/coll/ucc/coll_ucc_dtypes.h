@@ -156,10 +156,14 @@ static inline ucc_datatype_t mca_coll_ucc_dtype_get(ompi_datatype_t *dtype)
     return ucc_dt;
 }
 
-/* v-collectives decline non-dense derived types: UCC stages them only for
- * tight local displacements, a per-rank decision that deadlocks on mismatch */
+/* Without UCC_HAVE_GENERIC_DT_SIGNATURE_SYMMETRIC, v-collectives decline
+ * non-dense derived types: UCC stages them only for tight local
+ * displacements, a per-rank decision that deadlocks on mismatch */
 static inline ucc_datatype_t mca_coll_ucc_dtype_get_v(ompi_datatype_t *dtype)
 {
+#if UCC_HAVE_GENERIC_DT_SIGNATURE_SYMMETRIC
+    return mca_coll_ucc_dtype_get(dtype);
+#else
     ucc_datatype_t ucc_dt = ompi_dtype_to_ucc_dtype(dtype);
     size_t         extent;
 
@@ -168,6 +172,7 @@ static inline ucc_datatype_t mca_coll_ucc_dtype_get_v(ompi_datatype_t *dtype)
         (void)mca_coll_ucc_derived_dt_get(dtype, &ucc_dt);
     }
     return ucc_dt;
+#endif
 }
 
 /**

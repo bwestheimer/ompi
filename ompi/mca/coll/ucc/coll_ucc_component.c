@@ -121,8 +121,15 @@ static int mca_coll_ucc_register(void)
      * offloaded as contiguous UCC generic datatypes; 2: also offload non
      * contiguous datatypes through the OPAL convertor, which requires a UCC
      * that stages non-contiguous generic datatypes in its core (UCC master
-     * only consumes the contiguous form and would mis-size the message). */
+     * only consumes the contiguous form and would mis-size the message).
+     * 0 and 1 decline per rank, which hangs when ranks pass different types
+     * of the same signature, so 2 is the default when UCC is signature
+     * symmetric. */
+#if UCC_HAVE_GENERIC_DT_SIGNATURE_SYMMETRIC
+    cm->ucc_derived_dt_enable = 2;
+#else
     cm->ucc_derived_dt_enable = 1;
+#endif
     mca_base_component_var_register(c, "derived_dt_enable",
                                     "[0|1|2] Enable/Disable offloading of MPI derived "
                                     "datatypes to UCC as generic datatypes: 0 - off, "
@@ -131,7 +138,12 @@ static int mca_coll_ucc_register(void)
                                     "support for packed generic datatypes; when UCC "
                                     "supports the datatype extent they run natively on "
                                     "the user layout where the algorithm allows it, and "
-                                    "are packed to a contiguous buffer otherwise",
+                                    "are packed to a contiguous buffer otherwise. "
+                                    "0 and 1 fall back per rank: ranks that pass "
+                                    "different datatypes of the same signature "
+                                    "(e.g. a derived type on the root only) can hang, "
+                                    "2 never declines a datatype locally when UCC is "
+                                    "signature symmetric (default then, 1 otherwise)",
                                     MCA_BASE_VAR_TYPE_INT, NULL, 0, MCA_BASE_VAR_FLAG_SETTABLE,
                                     OPAL_INFO_LVL_6,
                                     MCA_BASE_VAR_SCOPE_ALL, &cm->ucc_derived_dt_enable);
