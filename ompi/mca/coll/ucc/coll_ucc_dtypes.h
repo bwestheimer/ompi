@@ -156,6 +156,20 @@ static inline ucc_datatype_t mca_coll_ucc_dtype_get(ompi_datatype_t *dtype)
     return ucc_dt;
 }
 
+/* v-collectives decline non-dense derived types: UCC stages them only for
+ * tight local displacements, a per-rank decision that deadlocks on mismatch */
+static inline ucc_datatype_t mca_coll_ucc_dtype_get_v(ompi_datatype_t *dtype)
+{
+    ucc_datatype_t ucc_dt = ompi_dtype_to_ucc_dtype(dtype);
+    size_t         extent;
+
+    if (OPAL_UNLIKELY(COLL_UCC_DT_UNSUPPORTED == ucc_dt) &&
+        mca_coll_ucc_dtype_is_dense(dtype, &extent)) {
+        (void)mca_coll_ucc_derived_dt_get(dtype, &ucc_dt);
+    }
+    return ucc_dt;
+}
+
 /**
  * Check the memory layout of a buffer described by (dtype, count).
  *
